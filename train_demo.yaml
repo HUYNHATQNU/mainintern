@@ -1,0 +1,5 @@
+train: /content/drive/MyDrive/intern/train_demo/images/train  # đường dẫn đến thư mục chứa hình ảnh huấn luyện
+val: /content/drive/MyDrive/intern/train_demo/images/test   # đường dẫn đến thư mục chứa hình ảnh kiểm thử
+
+nc: 2                  # số lượng lớp
+names: ['violence','Not_violence']          # tên của các lớp
