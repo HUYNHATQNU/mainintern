@@ -8,16 +8,11 @@ from dotenv import load_dotenv
 import os
 import sys
 
-# Cấu hình logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Load biến môi trường từ file .env
 load_dotenv()
-
-# Lấy giá trị MODEL_PATH từ biến môi trường
 model_path = os.getenv("MODEL_PATH")
 
-# Kiểm tra nếu giá trị MODEL_PATH không tồn tại
 if model_path is None:
     logging.error("MODEL_PATH not found in the environment variables.")
     st.error("MODEL_PATH not found in the environment variables.")
