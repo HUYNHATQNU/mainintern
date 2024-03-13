@@ -10,13 +10,9 @@ import logging
 
 app = FastAPI()
 
-# Cấu hình logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Load biến môi trường từ file .env
 load_dotenv()
-
-# Lấy giá trị của biến môi trường MODEL_PATH
 model_path = os.getenv("MODEL_PATH")
 logging.info(f"Model path from env: {model_path}")
 
@@ -49,7 +45,6 @@ async def detect_objects(file: UploadFile = File(...)):
         results = model.predict(image, conf=confidence)
         logging.info("Object detection performed.")
 
-        # Lặp qua từng kết quả dự đoán
         for result in results:
             # Kiểm tra xem kết quả có hộp giới hạn không
             if result.boxes is not None:
