@@ -1,100 +1,120 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 import io
 from PIL import Image, ImageDraw
 from ultralytics import YOLO
 import os
 from io import BytesIO
+import logging
+from dotenv import load_dotenv
 
 app = FastAPI()
 
-
 # Load YOLO model
-model_path = r'C:\Users\rLap.com\OneDrive\Desktop\Train_data\last.pt'
+# Load environment variables from .env file
+load_dotenv()
+
+# Get the model path
+model_path = os.getenv('MODEL_PATH')
+model = YOLO(model_path)
 try:
     model = YOLO(model_path)
 except Exception as ex:
     raise RuntimeError(f"Unable to load model. Check the specified path: {model_path}") from ex
 
+confidence = 0.4 
+class_boxs = {'0':'Vilolence','1':'Not_Violence'}
+
 @app.get("/")
 async def get_index():
     return FileResponse("index.html")
 
+# Configuring logging
+logging.basicConfig(filename='app.log', filemode='w', format='%(name)s-%(levelname)s-%(message)s', level=logging.INFO)
+logger = logging.getLogger('uvicorn.error')
+
 @app.post("/detect")
-async def detect_objects(file: UploadFile = File(...)):
+async def detect_objects(file: UploadFile = File(...), confidence: float = 0.4):
     contents = await file.read()
     image = Image.open(BytesIO(contents))
-
-    confidence = 0.4  # Đặt mức độ tin cậy của bạn ở đây
-
     try:
-        detected_boxes = []  # Khởi tạo danh sách hộp giới hạn
-
-        # Dự đoán các đối tượng trong hình ảnh
+        logging.info('Straring object detection...')
+        detected_boxes = []  
+        # Predicting objects
+        logger.info('Predicting objects...')
         results = model.predict(image, conf=confidence)
 
-        # Lặp qua từng kết quả dự đoán
+        # Iterating through each prediction result
         for result in results:
-            # Kiểm tra xem kết quả có hộp giới hạn không
+            # Checking if the result has bounding boxes
             if result.boxes is not None:
-                # Lặp qua từng hộp giới hạn của kết quả dự đoán
+                # Iterating through each bounding box in the prediction result
                 for box in result.boxes:
-                    # Chuyển đổi tensor xyxy thành list để tránh lỗi serialization
+                    # Converting tensor xyxy to list to avoid serialization error
                     xyxy_list = box.xyxy.tolist()
 
-                    # Thêm thông tin của hộp giới hạn vào danh sách
+                    # Adding bounding box information to the list
+                    if box.cls == '0':
+                        box_cls = class_boxs['0']
+                    else:
+                        box_cls = class_boxs['1']
                     detected_boxes.append({
-                        "class": int(box.cls),       # Lớp của đối tượng
-                        "confidence": float(box.conf), # Độ tin cậy
+                        "class": box_cls,       
+                        "confidence": float(box.conf), 
                         "xyxy": xyxy_list
                     })
-        # Trả về danh sách các hộp giới hạn dưới dạng JSON
+        logger.info("Object detection completed.")
+        # Returning the list of bounding boxes as JSON
         return JSONResponse(content={"detected_objects": detected_boxes})
     except Exception as ex:
+        logger.error(f"Error during object detection: {ex}")
         return JSONResponse(content={"error": f"Error during object detection: {ex}"})
-    
+
 @app.post("/detect_and_return_image")
-async def detect_objects_and_return_image(file: UploadFile = File(...)):
-    contents = await file.read()
-    image = Image.open(BytesIO(contents))
-
-    confidence = 0.4  # Đặt mức độ tin cậy của bạn ở đây
-
+async def detect_objects_and_return_image(file: UploadFile = File(...), confidence: float = 0.4):
+    logging.info("Received a file for object detection and returning image with boxes.")
+    
     try:
-        detected_boxes = []  # Khởi tạo danh sách hộp giới hạn
+        # Reading the image file from the request
+        image = Image.open(io.BytesIO(await file.read()))
 
-        # Dự đoán các đối tượng trong hình ảnh
+        detected_boxes = []  
+        # Predicting objects in the image
         results = model.predict(image, conf=confidence)
-
-        # Lặp qua từng kết quả dự đoán
+        logging.info("Object detection performed for image return.")
+        
+        # Iterating through each prediction result
         for result in results:
-            # Kiểm tra xem kết quả có hộp giới hạn không
+            # Checking if the result has bounding boxes
             if result.boxes is not None:
-                # Lặp qua từng hộp giới hạn của kết quả dự đoán
+                # Iterating through each bounding box in the prediction result
                 for box in result.boxes:
-                    # Chuyển đổi tensor xyxy thành danh sách và sửa định dạng tọa độ
-                    xyxy_list = [float(coord) for coord in box.xyxy.flatten()]
-
-                    # Thêm thông tin của hộp giới hạn vào danh sách với độ tin cậy
+                    xyxy_list = box.xyxy.tolist()
+                    box_cls = class_boxs.get(str(box.cls), "Unknown")
                     detected_boxes.append({
-                        "class": int(box.cls),       # Lớp của đối tượng
-                        "confidence": float(box.conf), # Độ tin cậy
+                        "class": box_cls,       
+                        "confidence": float(box.conf), 
                         "xyxy": xyxy_list
                     })
+        logging.info(f"Detected {len(detected_boxes)} objects with image return.")
 
-        # Vẽ hộp giới hạn lên ảnh
+        # Drawing bounding boxes on the image
         image_with_boxes = image.copy()
+        draw = ImageDraw.Draw(image_with_boxes)
         for box in detected_boxes:
-            ImageDraw.Draw(image_with_boxes).rectangle(box["xyxy"], outline="red", width=3)
-            ImageDraw.Draw(image_with_boxes).text((box["xyxy"][0], box["xyxy"][1]), f"Conf: {box['confidence']:.2f}", fill="red")
-
-        # Chuyển đổi ảnh thành dữ liệu nhị phân
-        image_bytes = BytesIO()
+            draw.rectangle(box["xyxy"], outline="red", width=3)
+            draw.text((box["xyxy"][0], box["xyxy"][1] - 10),f"{box['class']} Conf: {box['confidence']:.2f}", fill="red")
+        logging.info("Completed drawing bounding boxes.")
+        
+        # Converting the image to binary data
+        image_bytes = io.BytesIO()
         image_with_boxes.save(image_bytes, format="PNG")
         image_bytes.seek(0)
-
-        # Trả về ảnh đã được dự đoán dưới dạng streaming response
-        return StreamingResponse(io.BytesIO(image_bytes.read()), media_type="image/png")
+        logging.info("Returning the image with detected objects as a streaming response.")
+        
+        # Returning the predicted image as a streaming response
+        return StreamingResponse(image_bytes, media_type="image/png")
 
     except Exception as ex:
-        return JSONResponse(content={"error": f"Lỗi trong quá trình phát hiện đối tượng: {ex}"})
+        logging.error("Error during object detection and returning image.", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error during object detection: {ex}")

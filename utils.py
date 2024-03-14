@@ -8,6 +8,7 @@ from PIL import Image
 import streamlit as st
 from typing import Union
 from ultralytics import YOLO
+import time
 
 # Define the device to be used for computation
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -36,7 +37,7 @@ def load_yaml(file_path: str) -> dict:
 
 
 # Function for removing temporary files
-'''def remove_temp(temp_file: str = 'temp') -> None:
+def remove_temp(temp_file: str = 'temp') -> None:
     """
     Remove all files in the specified temporary directory.
 
@@ -44,9 +45,7 @@ def load_yaml(file_path: str) -> dict:
         temp_file (str, optional): Path to the temporary directory. Defaults to 'temp'.
     """
     for file in os.listdir(temp_file):
-        os.remove(os.path.join(temp_file, file))'''
-
-
+        os.remove(os.path.join(temp_file, file))
 
 
 # Function for detecting objects in an image
@@ -103,4 +102,25 @@ def video_detect(source: str, uploaded_video: Union[None, io.BytesIO], confidenc
 
         # Open the uploaded video file
         cap = cv2.VideoCapture(temp_video_path)
-    
+
+    frame_count = 0
+    while cap.isOpened():
+        # Read every nth frame to improve performance
+        if frame_count % 10 == 0:
+            success, frame = cap.read()
+            if success:
+                results = model.track(frame, persist=True, conf=confidence_threshold,
+                                      max_det=max_detections, classes=class_ids, device=DEVICE)
+
+                # Plot the detected objects on the frame
+                processed_frame = results[0].plot()
+
+                # Display processed frame with detected objects
+                video_feed.image(processed_frame, caption='Detected Video.', channels="BGR",
+                                 use_column_width='auto', output_format='auto', width=None)
+            else:
+                break
+        frame_count += 1
+
+    # Release video capture
+    cap.release()
