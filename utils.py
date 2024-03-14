@@ -103,6 +103,15 @@ def video_detect(source: str, uploaded_video: Union[None, io.BytesIO], confidenc
         # Open the uploaded video file
         cap = cv2.VideoCapture(temp_video_path)
 
+    elif source == "webcam":
+        try:
+            # Open webcam
+            cap = cv2.VideoCapture(0)
+        except Exception as e:
+            st.error("Error: Unable to Access Webcam")
+            return
+
+    # Loop through frames of the video
     frame_count = 0
     while cap.isOpened():
         # Read every nth frame to improve performance
