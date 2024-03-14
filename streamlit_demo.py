@@ -1,9 +1,13 @@
 import streamlit as st
 from utils import *
+import logging
+
+# Configure logging
+logging.basicConfig(filename='app.log', filemode='w', format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Set Streamlit page configuration
 st.set_page_config(
-    page_title=" Violence detection using YOLOv8",
+    page_title="Violence detection using YOLOv8",
     page_icon="🐼",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -14,7 +18,7 @@ st.title("Streamlit Object Violence detection with YOLOv8")
 
 # Sidebar for selecting image source
 st.sidebar.title("Model Settings")
-source = st.sidebar.radio("Select source:", ("Image","Video",'Webcam'))
+source = st.sidebar.radio("Select source:", ("Image", "Video", 'Webcam'))
 
 uploaded_image = None
 uploaded_video = None
@@ -41,21 +45,21 @@ selected_class_ids = [class_id for class_id, class_name in coco128_classes.items
 # Perform object detection based on the selected source
 if uploaded_image is not None:
     # Object detection for uploaded image
+    logging.info("Performing object detection on uploaded image...")
     image_detect(image=uploaded_image, confidence_threshold=confidence_threshold,
                  max_detections=max_detections, class_ids=selected_class_ids)
-    # Remove temporary files
-    #remove_temp('temp')
+    logging.info("Object detection on uploaded image completed.")
+
 elif uploaded_video:
     # Object detection for uploaded video
+    logging.info("Performing object detection on uploaded video...")
     video_detect(source='video', uploaded_video=uploaded_video, confidence_threshold=confidence_threshold,
                  max_detections=max_detections, class_ids=selected_class_ids)
-     # Remove temporary files
-    #remove_temp('temp')'''
+    logging.info("Object detection on uploaded video completed.")
+
 elif source == 'Webcam':
     # Real-time object detection from webcam feed
+    logging.info("Performing real-time object detection from webcam feed...")
     video_detect(source='webcam', uploaded_video=None, confidence_threshold=confidence_threshold,
                  max_detections=max_detections, class_ids=selected_class_ids)
-
-    # Remove temporary files
-    #remove_temp()
-
+    logging.info("Real-time object detection from webcam feed completed.")
