@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Object Detection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        img {
+            max-width: 100%;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Object Detection using FastAPI</h1>
+        <p>This is a simple web application for object detection using FastAPI.</p>
+        
+        <!-- Form for /detect endpoint -->
+        <form id="detect-form" enctype="multipart/form-data">
+            <input type="file" name="file" accept="image/*">
+            <button type="submit">Detect Objects</button>
+        </form>
+        
+        <!-- Form for /detect_and_return_image endpoint -->
+        <form id="detect-image-form" enctype="multipart/form-data">
+            <input type="file" name="file" accept="image/*">
+            <button type="submit">Detect Objects and Return Image</button>
+        </form>
+        
+        <!-- Object Detection Results -->
+        <div id="object-detection-results">
+            <h2>Object Detection Results:</h2>
+            <table id="results-table">
+                <thead>
+                    <tr>
+                        <th>Class</th>
+                        <th>Confidence</th>
+                        <th>Bounding Box</th>
+                    </tr>
+                </thead>
+                <tbody id="results-body"></tbody>
+            </table>
+        </div>
+        
+        <!-- Detected Image -->
+        <div id="detected-image"></div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Lắng nghe sự kiện submit của form /detect
+            document.querySelector("#detect-form").addEventListener("submit", function (event) {
+                event.preventDefault(); // Ngăn chặn việc gửi yêu cầu mặc định
+
+                // Lấy tệp hình ảnh từ form
+                var formData = new FormData(this);
+
+                // Gửi yêu cầu POST đến endpoint /detect
+                fetch("/detect", {
+                    method: "POST",
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Xử lý kết quả trả về
+                    displayDetectionResults(data.detected_objects);
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert("An error occurred. Please try again.");
+                });
+            });
+
+            // Lắng nghe sự kiện submit của form /detect_and_return_image
+            document.querySelector("#detect-image-form").addEventListener("submit", function (event) {
+                event.preventDefault(); // Ngăn chặn việc gửi yêu cầu mặc định
+
+                // Lấy tệp hình ảnh từ form
+                var formData = new FormData(this);
+
+                // Gửi yêu cầu POST đến endpoint /detect_and_return_image
+                fetch("/detect_and_return_image", {
+                    method: "POST",
+                    body: formData
+                })
+                .then(response => {
+                    // Nếu kết quả trả về là hình ảnh, hiển thị nó
+                    if (response.headers.get("content-type").includes("image")) {
+                        return response.blob();
+                    } else {
+                        // Nếu kết quả trả về không phải hình ảnh, hiển thị thông báo lỗi
+                        throw new Error("Invalid response. Please try again.");
+                    }
+                })
+                .then(blob => {
+                    // Hiển thị hình ảnh
+                    displayDetectedImage(blob);
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert("An error occurred. Please try again.");
+                });
+            });
+        });
+
+        // Hàm hiển thị kết quả phát hiện đối tượng
+        function displayDetectionResults(objects) {
+            var resultsBody = document.querySelector("#results-body");
+            resultsBody.innerHTML = ""; // Xóa nội dung hiện tại của tbody
+
+            objects.forEach(function (object) {
+                // Tạo một hàng mới trong bảng cho mỗi đối tượng được phát hiện
+                var row = resultsBody.insertRow();
+
+                // Thêm dữ liệu vào các cột của hàng
+                row.insertCell().textContent = object.class_name;
+                row.insertCell().textContent = object.confidence.toFixed(2);
+                row.insertCell().textContent = object.xyxy.join(", ");
+            });
+        }
+
+        // Hàm hiển thị hình ảnh đã phát hiện đối tượng
+        function displayDetectedImage(blob) {
+            var detectedImageDiv = document.querySelector("#detected-image");
+            detectedImageDiv.innerHTML = ""; // Xóa nội dung hiện tại của div
+
+            // Tạo một phần tử hình ảnh và đặt thuộc tính src bằng URL của hình ảnh
+            var img = document.createElement("img");
+            img.src = URL.createObjectURL(blob);
+
+            // Thêm hình ảnh vào div
+            detectedImageDiv.appendChild(img);
+        }
+    </script>
+</body>
+</html>
