@@ -73,21 +73,21 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            // Lắng nghe sự kiện submit của form /detect
+            // submit của form /detect
             document.querySelector("#detect-form").addEventListener("submit", function (event) {
-                event.preventDefault(); // Ngăn chặn việc gửi yêu cầu mặc định
+                event.preventDefault(); // chặn việc gửi yêu cầu mặc định
 
-                // Lấy tệp hình ảnh từ form
+                // lấy tệp hình ảnh từ form
                 var formData = new FormData(this);
 
-                // Gửi yêu cầu POST đến endpoint /detect
+                // yêu cầu POST đến endpoint /detect
                 fetch("/detect", {
                     method: "POST",
                     body: formData
                 })
                 .then(response => response.json())
                 .then(data => {
-                    // Xử lý kết quả trả về
+                    // xử lý kết quả
                     displayDetectionResults(data.detected_objects);
                 })
                 .catch(error => {
@@ -96,24 +96,23 @@
                 });
             });
 
-            // Lắng nghe sự kiện submit của form /detect_and_return_image
+            // sự kiện submit của form /detect_and_return_image
             document.querySelector("#detect-image-form").addEventListener("submit", function (event) {
-                event.preventDefault(); // Ngăn chặn việc gửi yêu cầu mặc định
+                event.preventDefault(); // chặn việc gửi yêu cầu mặc định
 
-                // Lấy tệp hình ảnh từ form
                 var formData = new FormData(this);
 
-                // Gửi yêu cầu POST đến endpoint /detect_and_return_image
+                // yêu cầu POST đến endpoint /detect_and_return_image
                 fetch("/detect_and_return_image", {
                     method: "POST",
                     body: formData
                 })
                 .then(response => {
-                    // Nếu kết quả trả về là hình ảnh, hiển thị nó
+                    // nếu kết quả trả về là hình ảnh, hiển thị nó
                     if (response.headers.get("content-type").includes("image")) {
                         return response.blob();
                     } else {
-                        // Nếu kết quả trả về không phải hình ảnh, hiển thị thông báo lỗi
+                        // nếu kết quả trả về không phải hình ảnh, hiển thị thông báo lỗi
                         throw new Error("Invalid response. Please try again.");
                     }
                 })
@@ -128,17 +127,17 @@
             });
         });
 
-        // Hàm hiển thị kết quả phát hiện đối tượng
+        // hiển thị kết quả phát hiện đối tượng
         function displayDetectionResults(objects) {
             var resultsBody = document.querySelector("#results-body");
-            resultsBody.innerHTML = ""; // Xóa nội dung hiện tại của tbody
+            resultsBody.innerHTML = ""; // xóa nội dung hiện tại của tbody
 
             objects.forEach(function (object) {
-                // Tạo một hàng mới trong bảng cho mỗi đối tượng được phát hiện
+                // tạo một hàng mới trong bảng cho mỗi đối tượng được phát hiện
                 var row = resultsBody.insertRow();
 
-                // Thêm dữ liệu vào các cột của hàng
-                row.insertCell().textContent = object.class_name;
+                // thêm dữ liệu vào các cột của hàng
+                row.insertCell().textContent = object.class // chỉ số lớp
                 row.insertCell().textContent = object.confidence.toFixed(2);
                 row.insertCell().textContent = object.xyxy.join(", ");
             });
